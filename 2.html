@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Syrisch-Arabischer Phrasentrainer</title>
+  <script>
+    const AZURE_API_KEY = "DEIN_API_KEY_HIER";
+    const AZURE_REGION = "DEINE_REGION_HIER";
+
+    async function speak(text) {
+      const url = `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
+      const headers = {
+        "Ocp-Apim-Subscription-Key": AZURE_API_KEY,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3"
+      };
+
+      const ssml = `
+        <speak version='1.0' xml:lang='ar-LB'>
+          <voice name='ar-LB-RanaNeural'>${text}</voice>
+        </speak>`;
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: ssml
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+      } catch (error) {
+        console.error("Fehler bei der Sprachausgabe:", error);
+      }
+    }
+
+    function toggleVisibility(id, forceShow = false) {
+      const section = document.getElementById(id);
+      section.style.display = forceShow || section.style.display === "none" ? "block" : "none";
+    }
+
+    function searchPhrases() {
+      let searchText = document.getElementById("searchInput").value.toLowerCase();
+      let rows = document.querySelectorAll(".phrase-row");
+      let phraseLists = document.querySelectorAll(".phrase-list");
+      
+      phraseLists.forEach(list => list.style.display = "none");
+      rows.forEach(row => {
+        if (row.textContent.toLowerCase().includes(searchText)) {
+          row.style.display = "table-row";
+          let parentList = row.closest(".phrase-list");
+          if (parentList) {
+            parentList.style.display = "block";
+          }
+        } else {
+          row.style.display = "none";
+        }
+      });
+    }
+  </script>
+  <style>
+    body {
+      font-family: "Arial", sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .search-container {
+      margin-bottom: 20px;
+    }
+
+    #searchInput {
+      width: 80%;
+      max-width: 600px;
+      padding: 6px;
+      font-size: 16px;
+      border: 1px solid #E6C7A5;
+      border-radius: 5px;
+      outline: none;
+      text-align: center;
+    }
+
+    .topic {
+      font-size: 20px;
+      background-color: #E6C7A5;
+      padding: 10px;
+      width: 80%;
+      max-width: 600px;
+      cursor: pointer;
+      border-radius: 5px;
+      text-align: center;
+      margin: 10px auto;
+      transition: background-color 0.3s;
+    }
+
+    .topic:hover {
+      background-color: #D4A98B;
+    }
+
+    .phrase-list {
+      width: 80%;
+      max-width: 600px;
+      margin: auto;
+      display: none;
+      background-color: #F8EDE3;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🗣️ Syrisch-Arabischer Phrasentrainer</h1>
+
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="🔍 Suche" onkeyup="searchPhrases()">
+  </div>
+
+  <div id="phrasesContainer"></div>
+
+  <script>
+    const phraseData = {
+      "Kursbuchung": [
+        { de: "Gibt es noch freie Plätze?", ar: "في بعد أماكن فاضية؟", transliteration: "fi ba'ad amakn fadiye?" },
+        { de: "Wann beginnt der Kurs?", ar: "إيمتى بيبلش الكورس؟", transliteration: "emta byiballesh elkurs?" }
+      ],
+      "Wegbeschreibung": [
+        { de: "Wie komme ich zum Bahnhof?", ar: "كيف بروح عالقطار؟", transliteration: "kif brouh 'al qitar?" },
+        { de: "Ist es weit von hier?", ar: "بعيد من هون؟", transliteration: "ba'id mn hoon?" }
+      ],
+      "Kinderbetreuung": [
+        { de: "Wie lange können Sie auf mein Kind aufpassen?", ar: "قديش فيك تنتبه عابني؟", transliteration: "qaddeish fiyk tintibeh 'a bni?" },
+        { de: "Was kostet die Betreuung?", ar: "قديش حق الحضانة؟", transliteration: "qaddeish ha' el hadana?" }
+      ]
+    };
+
+    function generatePhraseTables() {
+      let count = 0;
+      for (let topic in phraseData) {
+        let topicId = `topic-${count}`;
+        let topicTitle = document.createElement("div");
+        topicTitle.className = "topic";
+        topicTitle.textContent = topic;
+        topicTitle.setAttribute("onclick", `toggleVisibility('${topicId}')`);
+        document.getElementById("phrasesContainer").appendChild(topicTitle);
+
+        let phraseList = document.createElement("div");
+        phraseList.className = "phrase-list";
+        phraseList.id = topicId;
+        let table = document.createElement("table");
+        table.innerHTML = phraseData[topic].map(phrase => `
+          <tr class="phrase-row">
+            <td>${phrase.de}</td>
+            <td class="arabic-text" onclick="speak(this.innerText)">${phrase.ar}</td>
+            <td>${phrase.transliteration}</td>
+          </tr>
+        `).join("");
+        phraseList.appendChild(table);
+        document.getElementById("phrasesContainer").appendChild(phraseList);
+        count++;
+      }
+    }
+
+    generatePhraseTables();
+  </script>
+</body>
+</html>
